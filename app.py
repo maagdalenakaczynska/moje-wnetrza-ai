@@ -47,4 +47,33 @@ if btn:
             try:
                 # Budujemy prosty prompt
                 style_desc = STYLES[selected_style]
-                full_prompt = f"Professional interior design, {style_desc}
+                full_prompt = f"Professional interior design, {style_desc}, architectural photography, 8k, realistic materials"
+                
+                # WYWOŁANIE MODELU (Bez podawania wersji - Replicate sam dobierze najnowszą)
+                output = replicate.run(
+                    "xue-pals/controlnet-interior-design",
+                    input={
+                        "image": uploaded_file,
+                        "prompt": full_prompt,
+                        "structure_fidelity": fidelity,
+                        "num_outputs": 1
+                    }
+                )
+
+                image_url = output[0]
+                
+                with col2:
+                    st.image(image_url, caption="Twój projekt")
+                    # Pobieranie
+                    data = requests.get(image_url).content
+                    st.download_button("Pobierz projekt", data, "projekt.png", "image/png")
+                
+                st.success("Gotowe!")
+
+            except Exception as e:
+                st.error(f"Wystąpił błąd: {str(e)}")
+
+# Wyświetlanie oryginału pod spodem jeśli brak wyniku
+if uploaded_file and not btn:
+    with col2:
+        st.image(uploaded_file, caption="Oryginał")
