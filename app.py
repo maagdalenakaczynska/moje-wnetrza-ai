@@ -4,91 +4,94 @@ import os
 import requests
 
 # --- KONFIGURACJA STRONY ---
-st.set_page_config(page_title="Architectural Visionary AI", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Architectural Visionary AI", layout="wide")
 
-# Poprawiona stylizacja CSS
+# Stylizacja CSS
 st.markdown("""
     <style>
-    .main { background-color: #f5f5f5; }
-    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #2c3e50; color: white; }
+    .main { background-color: #f0f2f6; }
+    .stButton>button { width: 100%; border-radius: 8px; height: 3em; background-color: #1f1f2e; color: white; font-weight: bold; }
+    .stSelectbox label, .stSlider label { font-weight: bold; color: #1f1f2e; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- BOCZNY PANEL ---
 with st.sidebar:
-    st.title("Ustawienia")
-    api_key = st.text_input("Wklej Replicate API Token:", type="password")
+    st.title("⚙️ Ustawienia")
+    api_key = st.text_input("Replicate API Token:", type="password")
     if api_key:
         os.environ["REPLICATE_API_TOKEN"] = api_key
-    st.info("Klucz znajdziesz na: replicate.com/account/api-tokens")
+    st.info("Klucz API pobierzesz z: replicate.com/account/api-tokens")
 
 # --- BIBLIOTEKA STYLÓW ---
 STYLES = {
-    "Tropical Modernism": "raw concrete, warm teak wood panels, lush indoor tropical garden, massive floor-to-ceiling glass, architectural shadows, Brazilian brutalism inspired, luxury jungle vibe",
-    "Desert Brutalism": "monolithic sandstone and concrete, minimalist desert landscaping, warm earth tones, circular cutouts, high contrast lighting, Palm Springs luxury meets brutalist shapes",
-    "Japandi Luxury": "seamless blend of Japanese minimalism and Scandinavian warmth, light oak wood, washi paper textures, matted black accents, zen atmosphere, low-profile furniture",
-    "Parisian Haussmann (Modern)": "classic ornate white wall moldings, light herringbone oak parquet, marble fireplace, contemporary art, high ceilings, large windows with soft daylight",
-    "Quiet Luxury / Old Money": "high-end cashmere textures, dark mahogany wood, brass accents, understated elegance, neutral palette, rich textures, classic architectural proportions",
-    "Biophilic High-Tech": "integrated vertical green walls, smart glass, organic flowing architectural shapes, natural wood and stone, air-purifying plants, futuristic eco-living",
-    "Industrial Loft (New York)": "exposed red brick, black steel beams, polished concrete floors, double-height ceilings, large factory windows, leather furniture, vintage Edison lighting",
-    "Mediterranean Zen": "whitewashed plaster walls, terracotta tiles, olive wood accents, arched doorways, soft linen fabrics, relaxed coastal luxury, warm sun-drenched atmosphere"
+    "Tropical Modernism": "Tropical modernism, raw concrete, teak wood, lush indoor plants, large glass walls, cinematic lighting, Brazilian architecture",
+    "Desert Brutalism": "Desert brutalism, sandstone, monolithic concrete, minimalist cacti garden, warm earth tones, sharp shadows",
+    "Japandi Luxury": "Japandi, minimalist, light oak, paper textures, zen, high-end furniture, wabi-sabi",
+    "Parisian Modern": "Modern Parisian apartment, white moldings, herringbone floor, marble, elegant, airy",
+    "Quiet Luxury": "Quiet luxury, high-end materials, cashmere, dark wood, sophisticated, beige and grey palette",
+    "Industrial Loft": "Industrial loft, exposed brick, black steel, high ceilings, large windows, leather and metal",
+    "Mediterranean Zen": "Mediterranean zen, white plaster, arched openings, olive wood, terracotta, sun-drenched",
+    "Biophilic Future": "Biophilic design, living walls, organic shapes, futuristic architecture, natural light"
 }
 
 # --- INTERFEJS GŁÓWNY ---
 st.title("🏛️ Architectural Visionary")
-st.subheader("Profesjonalna wizualizacja wnętrz z zachowaniem geometrii")
+st.write("Wgraj zdjęcie, aby zmienić swoje wnętrze z zachowaniem wymiarów.")
 
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.markdown("### 1. Prześlij zdjęcie")
-    uploaded_file = st.file_uploader("Wgraj zdjęcie pokoju", type=["jpg", "jpeg", "png"])
+    st.subheader("1. Twoje zdjęcie")
+    uploaded_file = st.file_uploader("Wybierz plik (JPG/PNG)", type=["jpg", "jpeg", "png"])
     
-    st.markdown("### 2. Wybierz styl")
-    selected_style = st.selectbox("Styl architektoniczny:", list(STYLES.keys()))
+    selected_style = st.selectbox("Wybierz styl architektoniczny:", list(STYLES.keys()))
     
-    fidelity = st.slider("Wierność wymiarom (Structure Fidelity)", 0.3, 0.8, 0.7)
+    # Prompt to serce AI
+    custom_prompt = STYLES[selected_style]
     
-    generate_btn = st.button("GENERUJ PROJEKT ✨")
+    # Suwak siły zmian
+    prompt_strength = st.slider("Wierność oryginałowi (Im więcej, tym mniej zmian w strukturze)", 0.5, 1.0, 0.8)
+    
+    generate_btn = st.button("GENERUJ WIZUALIZACJĘ ✨")
 
 with col2:
-    st.markdown("### 3. Wizualizacja")
+    st.subheader("2. Wynik")
     if uploaded_file:
-        st.image(uploaded_file, caption="Twoje oryginalne wnętrze", use_container_width=True)
+        st.image(uploaded_file, caption="Oryginał", use_container_width=True)
+    else:
+        st.write("Tu pojawi się Twój nowy projekt.")
 
 # --- LOGIKA GENEROWANIA ---
 if generate_btn:
     if not api_key:
-        st.error("Błąd: Musisz podać Replicate API Token w panelu bocznym!")
+        st.error("Wklej swój API Token w lewym panelu!")
     elif uploaded_file is None:
-        st.error("Błąd: Wgraj zdjęcie.")
+        st.error("Wgraj zdjęcie!")
     else:
-        with st.spinner(f"Projektowanie w stylu {selected_style}..."):
+        with st.spinner("Przetwarzanie... To potrwa około 20 sekund."):
             try:
+                # UŻYWAMY NOWEGO, SPRAWDZONEGO MODELU
                 output = replicate.run(
-                    "jagadeesh-j/interior-ai:7660b445372ca620785167667d7a16744036125a22e86209b552f483864a7813",
+                    "lucataco/interior-ai:042302324905d45d8b72e12e7ef63e3d489f6d149021e7d23a1059f8a370e70a",
                     input={
                         "image": uploaded_file,
-                        "prompt": f"A high-end, photorealistic interior design of a room in {selected_style} style, architectural digest photography, 8k, highly detailed, professional lighting",
-                        "negative_prompt": "low quality, blurry, distorted, messy, unrealistic, cheap furniture",
-                        "num_samples": 1,
-                        "guidance_scale": 8,
-                        "structure_fidelity": fidelity
+                        "prompt": f"A high-end {custom_prompt}, architectural photography, 8k, highly detailed",
+                        "image_strength": prompt_strength, # To kontroluje jak bardzo trzymamy się zdjęcia
+                        "num_inference_steps": 50,
+                        "guidance_scale": 7.5
                     }
                 )
                 
-                image_url = output[0]
-                st.image(image_url, caption=f"Projekt: {selected_style}", use_container_width=True)
+                # Model zwraca URL do obrazu
+                image_url = output
+                st.image(image_url, caption=f"Styl: {selected_style}", use_container_width=True)
                 
-                # Przygotowanie przycisku pobierania
-                img_data = requests.get(image_url).content
-                st.download_button(
-                    label="Pobierz zdjęcie",
-                    data=img_data,
-                    file_name="projekt_wnetrza.png",
-                    mime="image/png"
-                )
-                st.success("Gotowe!")
-            
+                # Przycisk pobierania
+                img_response = requests.get(image_url)
+                st.download_button("Pobierz projekt", img_response.content, "projekt.png", "image/png")
+                st.success("Wizualizacja gotowa!")
+
             except Exception as e:
                 st.error(f"Wystąpił błąd: {str(e)}")
+                st.info("Jeśli widzisz błąd 422, oznacza to że Replicate znów zmieniło wersję modelu. Napisz do mnie, a podam Ci najnowszą.")
