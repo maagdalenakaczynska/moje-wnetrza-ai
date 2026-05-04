@@ -6,92 +6,75 @@ import requests
 # --- KONFIGURACJA STRONY ---
 st.set_page_config(page_title="Architectural Visionary AI", layout="wide")
 
-# Stylizacja CSS
 st.markdown("""
     <style>
-    .main { background-color: #f0f2f6; }
-    .stButton>button { width: 100%; border-radius: 8px; height: 3em; background-color: #1f1f2e; color: white; font-weight: bold; }
-    .stSelectbox label, .stSlider label { font-weight: bold; color: #1f1f2e; }
+    .main { background-color: #f8f9fa; }
+    .stButton>button { width: 100%; border-radius: 10px; height: 3.5em; background-color: #1a1a2e; color: white; font-weight: bold; border: none; }
+    .stButton>button:hover { background-color: #16213e; border: 1px solid #4ecca3; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- BOCZNY PANEL ---
 with st.sidebar:
-    st.title("⚙️ Ustawienia")
-    api_key = st.text_input("Replicate API Token:", type="password")
+    st.title("⚙️ Konfiguracja")
+    api_key = st.text_input("Wklej swój Replicate API Token:", type="password")
     if api_key:
         os.environ["REPLICATE_API_TOKEN"] = api_key
-    st.info("Klucz API pobierzesz z: replicate.com/account/api-tokens")
+    st.info("Token znajdziesz na: replicate.com/account/api-tokens")
+    st.markdown("---")
+    st.markdown("### O aplikacji")
+    st.write("Aplikacja używa AI do transformacji wnętrz przy zachowaniu 100% geometrii ścian.")
 
-# --- BIBLIOTEKA STYLÓW ---
+# --- STYLE ---
 STYLES = {
-    "Tropical Modernism": "Tropical modernism, raw concrete, teak wood, lush indoor plants, large glass walls, cinematic lighting, Brazilian architecture",
-    "Desert Brutalism": "Desert brutalism, sandstone, monolithic concrete, minimalist cacti garden, warm earth tones, sharp shadows",
-    "Japandi Luxury": "Japandi, minimalist, light oak, paper textures, zen, high-end furniture, wabi-sabi",
-    "Parisian Modern": "Modern Parisian apartment, white moldings, herringbone floor, marble, elegant, airy",
-    "Quiet Luxury": "Quiet luxury, high-end materials, cashmere, dark wood, sophisticated, beige and grey palette",
-    "Industrial Loft": "Industrial loft, exposed brick, black steel, high ceilings, large windows, leather and metal",
-    "Mediterranean Zen": "Mediterranean zen, white plaster, arched openings, olive wood, terracotta, sun-drenched",
-    "Biophilic Future": "Biophilic design, living walls, organic shapes, futuristic architecture, natural light"
+    "Tropical Modernism": "raw concrete architecture, warm teak wood accents, lush indoor jungle, floor-to-ceiling glass, architectural shadows, luxury tropical vibe, Brazilian brutalism",
+    "Desert Brutalism": "monolithic sandstone structures, minimalist desert landscaping, warm earth tones, sharp architectural lines, deep shadows, Palm Springs aesthetic",
+    "Japandi Luxury": "perfect mix of Japanese minimalism and Scandinavian warmth, light oak wood, washi paper, matted black metal, serene zen atmosphere",
+    "Parisian Haussmann": "classic French moldings, white walls, light herringbone parquet, marble fireplace, high ceilings, contemporary luxury furniture",
+    "Quiet Luxury": "understated elegance, high-end fabrics, neutral beige palette, rich wood textures, sophisticated minimalist lighting",
+    "Biophilic High-Tech": "living green walls integrated into walls, organic shapes, futuristic materials, smart glass, abundance of natural plants"
 }
 
-# --- INTERFEJS GŁÓWNY ---
+# --- INTERFEJS ---
 st.title("🏛️ Architectural Visionary")
-st.write("Wgraj zdjęcie, aby zmienić swoje wnętrze z zachowaniem wymiarów.")
 
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.subheader("1. Twoje zdjęcie")
-    uploaded_file = st.file_uploader("Wybierz plik (JPG/PNG)", type=["jpg", "jpeg", "png"])
+    st.subheader("1. Wgraj zdjęcie wnętrza")
+    uploaded_file = st.file_uploader("Zdjęcie Twojego pokoju (JPG/PNG)", type=["jpg", "jpeg", "png"])
     
     selected_style = st.selectbox("Wybierz styl architektoniczny:", list(STYLES.keys()))
     
-    # Prompt to serce AI
-    custom_prompt = STYLES[selected_style]
+    # Dodatkowa precyzja
+    fidelity = st.slider("Wierność strukturze (0.8 = bardzo wiernie)", 0.1, 1.0, 0.75)
     
-    # Suwak siły zmian
-    prompt_strength = st.slider("Wierność oryginałowi (Im więcej, tym mniej zmian w strukturze)", 0.5, 1.0, 0.8)
-    
-    generate_btn = st.button("GENERUJ WIZUALIZACJĘ ✨")
+    generate_btn = st.button("STWÓRZ WIZUALIZACJĘ ✨")
 
 with col2:
-    st.subheader("2. Wynik")
+    st.subheader("2. Projekt")
     if uploaded_file:
         st.image(uploaded_file, caption="Oryginał", use_container_width=True)
     else:
-        st.write("Tu pojawi się Twój nowy projekt.")
+        st.info("Tu pojawi się wygenerowany projekt.")
 
 # --- LOGIKA GENEROWANIA ---
 if generate_btn:
     if not api_key:
-        st.error("Wklej swój API Token w lewym panelu!")
+        st.error("Wklej API Token w lewym panelu!")
     elif uploaded_file is None:
         st.error("Wgraj zdjęcie!")
     else:
-        with st.spinner("Przetwarzanie... To potrwa około 20 sekund."):
+        with st.spinner(f"Projektuję w stylu {selected_style}..."):
             try:
-                # UŻYWAMY NOWEGO, SPRAWDZONEGO MODELU
-                output = replicate.run(
-                    "lucataco/interior-ai:042302324905d45d8b72e12e7ef63e3d489f6d149021e7d23a1059f8a370e70a",
-                    input={
-                        "image": uploaded_file,
-                        "prompt": f"A high-end {custom_prompt}, architectural photography, 8k, highly detailed",
-                        "image_strength": prompt_strength, # To kontroluje jak bardzo trzymamy się zdjęcia
-                        "num_inference_steps": 50,
-                        "guidance_scale": 7.5
-                    }
-                )
+                # --- INTELIGENTNE POBIERANIE MODELU ---
+                # Używamy modelu xue-pals/controlnet-interior-design (bardzo mocny do wymiarów)
+                model_name = "xue-pals/controlnet-interior-design"
+                model = replicate.models.get(model_name)
+                # Pobieramy ZAWSZE najnowszą wersję, żeby uniknąć błędu 422
+                latest_version = model.versions.list()[0]
                 
-                # Model zwraca URL do obrazu
-                image_url = output
-                st.image(image_url, caption=f"Styl: {selected_style}", use_container_width=True)
-                
-                # Przycisk pobierania
-                img_response = requests.get(image_url)
-                st.download_button("Pobierz projekt", img_response.content, "projekt.png", "image/png")
-                st.success("Wizualizacja gotowa!")
-
-            except Exception as e:
-                st.error(f"Wystąpił błąd: {str(e)}")
-                st.info("Jeśli widzisz błąd 422, oznacza to że Replicate znów zmieniło wersję modelu. Napisz do mnie, a podam Ci najnowszą.")
+                # Uruchomienie generowania
+                output = latest_version.predict(
+                    image=uploaded_file,
+                    prompt=f"A professional high-end {ST
